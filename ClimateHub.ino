@@ -144,7 +144,7 @@ void reconnect() {
 
 // ======================= Handle measurements ===============
 void sendData( float T_HTU21D, float T_BMP180, float RH, float P, float T_floor, float T_ceiling) {
-      char *sensorNames[numSensors] = {
+      const char *sensorNames[numSensors] = {
         "temperature-HTU21D",
         "temperature-BMP180",
         "RH-HTU21D",
