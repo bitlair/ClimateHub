@@ -12,7 +12,6 @@
 #include "SparkFunHTU21D.h"
 #include <Adafruit_BMP085.h>
 
-#define numSensors 6
 const int   publishInterval = 60; // seconds
 
 const char* projectName     = "ClimateHub";
@@ -108,7 +107,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++) {
+  for (unsigned int i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
@@ -124,7 +123,7 @@ void reconnect() {
       Serial.println("connected");
       // Once connected, publish an announcement...
       char msg[50] = {0};
-      snprintf (msg, 75, "%s (re)connect #%ld", projectName, value);
+      snprintf (msg, 75, "%s (re)connect #%d", projectName, value);
       Serial.print("Publish message: ");
       Serial.println(msg);
       client.publish(mqttDebugTopic, msg);
@@ -144,35 +143,45 @@ void reconnect() {
 
 // ======================= Handle measurements ===============
 void sendData( float T_HTU21D, float T_BMP180, float RH, float P, float T_floor, float T_ceiling) {
-      const char *sensorNames[numSensors] = {
-        "temperature-HTU21D",
-        "temperature-BMP180",
-        "RH-HTU21D",
-        "BMP-BMP180",
-        "temperature-floor",
-        "temperature-ceiling"
-      };
-
-      float sensorValues[numSensors] = {
-        T_HTU21D,
-        T_BMP180,
-        RH,
-        P,
-        T_floor,
-        T_ceiling
-      };
+    const size_t numSensors = 4;
+    const struct {
+        const char *location;
+        const char *suffix;
+        float value;
+    } sensors[numSensors] = {
+        {
+            .location = "floor",
+            .suffix = "temperature_c",
+            .value = T_floor,
+        },
+        {
+            .location = "ceiling",
+            .suffix = "temperature_c",
+            .value = T_ceiling,
+        },
+        {
+            .location = "climatehub",
+            .suffix = "humidity_pct",
+            .value = RH,
+        },
+        {
+            .location = "climatehub",
+            .suffix = "pressure_hpa",
+            .value = P/100,
+        },
+    };
 
       char newState[50] = {0}; // MQTT topic to push to
       char newStateTopic[50] = {0}; // MQTT topic to push to
 
       Serial.println("------------------------------------");
 
-      for(int i = 0; i < numSensors; i++) {
-        sprintf(newStateTopic, "%s/%s", mqttTopic, sensorNames[i]);
+      for(size_t i = 0; i < numSensors; i++) {
+        sprintf(newStateTopic, "%s/%s/%s", mqttTopic, sensors[i].location, sensors[i].suffix);
 
         char temp[9];
         /* 4 is mininum width, 2 is precision; float value is copied onto str_temp*/
-        dtostrf(sensorValues[i], 4, 2, temp);
+        dtostrf(sensors[i].value, 4, 2, temp);
         sprintf(newState, "%s", temp);
 
         Serial.print(newStateTopic);
